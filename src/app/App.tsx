@@ -15,7 +15,7 @@ import { supabase } from '../lib/supabase';
 import './styles/app.css';
 
 function AppContent() {
-  const { activeView, setActiveView, isAISettingsOpen, isLinkParseOpen, isPasswordChangeOpen } = useNoteStore();
+  const { activeView, setActiveView, isAISettingsOpen, isLinkParseOpen, isPasswordChangeOpen, setPasswordChangeOpen } = useNoteStore();
   const [darkMode, setDarkMode] = React.useState(() => {
     const saved = localStorage.getItem('theme');
     return saved !== 'light';

@@ -576,7 +576,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
             label: c.label
           }));
           // 获取有效的笔记ID列表（用于过滤无效的connections）
-          const validNoteIds = new Set(filteredCloudNotes.map(n => n.id));
+          const validNoteIds = new Set(finalNotes.map(n => n.id));
           // 过滤掉引用了不存在笔记的connections
           const validConnections = formattedConnections.filter(
             c => validNoteIds.has(c.fromId) && validNoteIds.has(c.toId)
