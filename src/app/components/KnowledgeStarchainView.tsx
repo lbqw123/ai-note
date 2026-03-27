@@ -132,7 +132,7 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
   const [zoomOutHovered, setZoomOutHovered] = useState(false);
   const [resetHovered, setResetHovered] = useState(false);
   const [buttonHovered, setButtonHovered] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
 
@@ -186,6 +186,55 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
     setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
   }, [isPanning, panStart]);
   const handleMouseUp = () => setIsPanning(false);
+
+  // 移动端触摸缩放支持
+  const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null);
+  const [isTouchScaling, setIsTouchScaling] = useState(false);
+  const [touchPanStart, setTouchPanStart] = useState({ x: 0, y: 0 });
+  const [initialPinchZoom, setInitialPinchZoom] = useState(1);
+
+  const getTouchDistance = (touches: React.TouchList): number => {
+    if (touches.length < 2) return 0;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      setIsTouchScaling(true);
+      setIsPanning(false);
+      setLastTouchDistance(getTouchDistance(e.touches));
+      setInitialPinchZoom(zoom);
+    } else if (e.touches.length === 1) {
+      setIsPanning(true);
+      setTouchPanStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y });
+    }
+  }, [zoom, pan.x, pan.y]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && isTouchScaling) {
+      const distance = getTouchDistance(e.touches);
+      if (lastTouchDistance !== null) {
+        const scale = distance / lastTouchDistance;
+        const newZoom = Math.max(0.3, Math.min(2.5, initialPinchZoom * scale));
+        setZoom(newZoom);
+      }
+      e.preventDefault();
+    } else if (e.touches.length === 1 && isPanning && !isTouchScaling) {
+      setPan({
+        x: e.touches[0].clientX - touchPanStart.x,
+        y: e.touches[0].clientY - touchPanStart.y
+      });
+      e.preventDefault();
+    }
+  }, [isTouchScaling, isPanning, lastTouchDistance, initialPinchZoom, touchPanStart]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsPanning(false);
+    setIsTouchScaling(false);
+    setLastTouchDistance(null);
+  }, []);
 
   const selectedNode = selectedId ? notes.find(n => n.id === selectedId) : null;
   const relatedConnections = selectedId
@@ -265,11 +314,14 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
         <svg
           width="100%"
           height="100%"
-          className="cursor-grab active:cursor-grabbing"
+          className="cursor-grab active:cursor-grabbing touch-none"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           <defs>
             <radialGradient id="graph-bg" cx="50%" cy="50%">
