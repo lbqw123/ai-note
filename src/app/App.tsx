@@ -59,26 +59,51 @@ function AppContent() {
   
   // 视图顺序
   const viewOrder: NoteView[] = ['note', 'mindmap', 'starchain', 'graph'];
-  
+
   // 使用 ref 存储触摸位置
   const touchStartRef = useRef(0);
   const isSwipingRef = useRef(false);
   const mainRef = useRef<HTMLDivElement>(null);
-  
+  const isPanningRef = useRef(false);
+
+  // 通知 App 层开始拖拽操作（由子组件调用）
+  useEffect(() => {
+    const handlePanningStart = () => { isPanningRef.current = true; };
+    const handlePanningEnd = () => { isPanningRef.current = false; };
+
+    window.addEventListener('graph-panning-start', handlePanningStart);
+    window.addEventListener('graph-panning-end', handlePanningEnd);
+
+    return () => {
+      window.removeEventListener('graph-panning-start', handlePanningStart);
+      window.removeEventListener('graph-panning-end', handlePanningEnd);
+    };
+  }, []);
+
   // 使用原生事件监听，在 capture 阶段捕获
   useEffect(() => {
     const main = mainRef.current;
     if (!main) return;
-    
+
     const handleTouchStart = (e: TouchEvent) => {
+      // 多指触摸时不处理 swipe
+      if (e.touches.length > 1) {
+        isSwipingRef.current = false;
+        return;
+      }
       touchStartRef.current = e.touches[0].clientX;
       isSwipingRef.current = true;
     };
-    
+
     const handleTouchEnd = (e: TouchEvent) => {
+      // 正在拖拽时不处理 swipe
+      if (isPanningRef.current) {
+        isSwipingRef.current = false;
+        return;
+      }
       if (!isSwipingRef.current) return;
       isSwipingRef.current = false;
-      
+
       const touchEnd = e.changedTouches[0].clientX;
       const minSwipeDistance = 50;
       const swipeDistance = touchEnd - touchStartRef.current;

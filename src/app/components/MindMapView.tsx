@@ -645,6 +645,7 @@ export function MindMapView({ darkMode }: MindMapViewProps) {
     } else if (e.touches.length === 1) {
       // 单指拖拽模式
       setIsPanning(true);
+      window.dispatchEvent(new CustomEvent('graph-panning-start'));
       setTouchPanStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y });
     }
   }, [zoom, pan.x, pan.y]);
@@ -672,6 +673,7 @@ export function MindMapView({ darkMode }: MindMapViewProps) {
   const handleTouchEnd = useCallback(() => {
     setIsPanning(false);
     setIsTouchScaling(false);
+    window.dispatchEvent(new CustomEvent('graph-panning-end'));
     setLastTouchDistance(null);
   }, []);
 

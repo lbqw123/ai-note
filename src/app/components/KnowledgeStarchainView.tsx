@@ -208,6 +208,7 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
       setInitialPinchZoom(zoom);
     } else if (e.touches.length === 1) {
       setIsPanning(true);
+      window.dispatchEvent(new CustomEvent('graph-panning-start'));
       setTouchPanStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y });
     }
   }, [zoom, pan.x, pan.y]);
@@ -233,6 +234,7 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
   const handleTouchEnd = useCallback(() => {
     setIsPanning(false);
     setIsTouchScaling(false);
+    window.dispatchEvent(new CustomEvent('graph-panning-end'));
     setLastTouchDistance(null);
   }, []);
 
