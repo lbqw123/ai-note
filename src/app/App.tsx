@@ -85,6 +85,10 @@ function AppContent() {
     const main = mainRef.current;
     if (!main) return;
 
+    // 只在底部区域响应滑动切换（移动端优化）
+    const BOTTOM_SWIPE_AREA = 100; // 底部 100px 区域
+    const touchStartYRef = useRef(0);
+
     const handleTouchStart = (e: TouchEvent) => {
       // 多指触摸时不处理 swipe
       if (e.touches.length > 1) {
@@ -92,6 +96,7 @@ function AppContent() {
         return;
       }
       touchStartRef.current = e.touches[0].clientX;
+      touchStartYRef.current = e.touches[0].clientY;
       isSwipingRef.current = true;
     };
 
@@ -105,6 +110,13 @@ function AppContent() {
       isSwipingRef.current = false;
 
       const touchEnd = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const windowHeight = window.innerHeight;
+      
+      // 只在底部区域响应滑动切换
+      const isInBottomArea = touchEndY > windowHeight - BOTTOM_SWIPE_AREA;
+      if (!isInBottomArea) return;
+
       const minSwipeDistance = 50;
       const swipeDistance = touchEnd - touchStartRef.current;
       

@@ -527,18 +527,6 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
           <div style={{ fontSize: '0.65rem', color: darkMode ? '#64748b' : '#94a3b8', marginBottom: 8 }}>
             {relatedConnections.length}
           </div>
-          <button
-            onClick={() => setActiveNote(selectedNode.id)}
-            className="p-1.5 rounded-lg transition-all mb-2"
-            style={{
-              background: 'rgba(124,90,240,0.15)',
-              border: '1px solid rgba(124,90,240,0.25)',
-              color: '#a78bfa',
-            }}
-            title="打开笔记"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M14 10 21 3"/><path d="M10 21H3v-6"/><path d="M10 14 3 21"/></svg>
-          </button>
         </div>
       )}
 
@@ -556,9 +544,11 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
           title={sidebarCollapsed ? '展开侧边栏' : '收缩侧边栏'}
         >
           {sidebarCollapsed ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6 6 6"/><path d="M21 3H3"/><path d="M18 6 6 6 6 6"/><path d="M3 21h18"/></svg>
+            // 展开图标（右上箭头）
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M14 10 21 3"/><path d="M10 21H3v-6"/><path d="M10 14 3 21"/></svg>
           ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6-6 6"/><path d="M21 3H3"/><path d="M18 6 6 6 6 6"/><path d="M3 21h18"/></svg>
+            // 收缩图标（左下箭头）
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H3v-6"/><path d="M10 14 3 21"/><path d="M14 3h6v6"/><path d="M15 10 21 3"/></svg>
           )}
         </button>
       )}
