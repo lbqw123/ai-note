@@ -572,7 +572,14 @@ export function NoteProvider({ children }: { children: ReactNode }) {
             type: c.type as ConnectionType,
             label: c.label
           }));
-          setConnections(formattedConnections);
+          // 获取有效的笔记ID列表（用于过滤无效的connections）
+          const validNoteIds = new Set(filteredCloudNotes.map(n => n.id));
+          // 过滤掉引用了不存在笔记的connections
+          const validConnections = formattedConnections.filter(
+            c => validNoteIds.has(c.fromId) && validNoteIds.has(c.toId)
+          );
+          console.log('>>> [DEBUG] 加载connections:', formattedConnections.length, '过滤后:', validConnections.length);
+          setConnections(validConnections);
         }
 
         // 加载AI设置
