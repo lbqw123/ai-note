@@ -1655,102 +1655,52 @@ class AIService:
             if len(text) > 50:
                 text = text[:47] + '...'
             
-            # 确定父节点
-            parent = None
-            if parsed['type'] == 'h1':
-                # # 一级 -> root 的子节点
-                parent = root_node
-                root_node['children'].append(node_id) if 'children' in root_node else None
-                stack = [root_node, {"id": node_id}]
-            elif parsed['type'] == 'h2':
-                # ## 二级 -> # 的子节点
-                parent = stack[1] if len(stack) > 1 and stack[1] else root_node
+            # 层级提升逻辑（统一处理所有标题类节点）
+            # 定义类型的实际级别（数字越小越高）
+            type_levels = {
+                'h1': 1, 'h2': 2, 'h3': 3, 'h4': 4, 'h5': 5, 'h6': 6,
+                'chinese': 4, 'bold': 5, 'arabic': 5, 'paren': 6
+            }
+            
+            current_type = parsed['type']
+            
+            if current_type in type_levels:
+                # 标题类节点：使用层级提升逻辑
+                actual_level = type_levels[current_type]
+                
+                # 找到已存在的最高级别
+                max_existing = 0
+                for i in range(1, len(stack)):
+                    if stack[i]:
+                        max_existing = i
+                
+                # 确定有效级别：已存在最高级别+1，和实际级别取较大值
+                effective_level = max(max_existing + 1, actual_level)
+                
+                # 找到要挂载的父节点（effective_level - 1）
+                parent_level = effective_level - 1
+                if parent_level <= 0 or parent_level >= len(stack):
+                    parent = root_node
+                else:
+                    parent = stack[parent_level] if stack[parent_level] else root_node
+                
                 if 'children' not in parent:
                     parent['children'] = []
                 parent['children'].append(node_id)
-                stack = [root_node, stack[1] if len(stack) > 1 else None, {"id": node_id}]
-            elif parsed['type'] == 'h3':
-                # h3 应该挂载到 h2 或 h1 或 root 下
-                # 连续的 h3 应该是同级关系，都挂载到同一个父节点
-                # 判断逻辑：
-                # - 如果 stack 长度 >= 4，说明有 h1, h2, h3，当前是新的 h3，挂载到 h2
-                # - 如果 stack 长度 == 3，说明有 h1, h2，挂载到 h2
-                # - 如果 stack 长度 == 2，说明只有 h1，挂载到 h1
-                # - 如果 stack 长度 == 1，说明只有 root，挂载到 root
-                parent = root_node
-                if len(stack) >= 4:
-                    # stack = [root, h1, h2, prev_h3]，挂载到 h2
-                    parent = stack[2]
-                elif len(stack) == 3 and stack[2]:
-                    # stack = [root, h1, h2]，挂载到 h2
-                    parent = stack[2]
-                elif len(stack) == 2 and stack[1]:
-                    # stack = [root, h1]，挂载到 h1
-                    parent = stack[1]
-                # 否则 stack = [root]，挂载到 root
-                if 'children' not in parent:
-                    parent['children'] = []
-                parent['children'].append(node_id)
-                # 重置 stack，保留 root, h1, h2（如果存在）和当前 h3
-                # 这样后续的 h3 也会挂载到同一个父节点
+                
+                # 更新 stack：保留 root 和有效的父节点层级
                 new_stack = [root_node]
-                if len(stack) >= 3 and stack[1] and stack[2]:
-                    # 有 h1 和 h2
-                    new_stack.append(stack[1])  # h1
-                    new_stack.append(stack[2])  # h2
-                elif len(stack) == 2 and stack[1]:
-                    # 只有 h1
-                    new_stack.append(stack[1])  # h1
-                new_stack.append({"id": node_id})  # current h3
+                for i in range(1, parent_level + 1):
+                    new_stack.append(stack[i] if i < len(stack) and stack[i] else None)
+                new_stack.append({"id": node_id})  # 当前节点
                 stack = new_stack
-            elif parsed['type'] == 'h4':
-                parent = stack[3] if len(stack) > 3 and stack[3] else (stack[2] if len(stack) > 2 and stack[2] else root_node)
-                if 'children' not in parent:
-                    parent['children'] = []
-                parent['children'].append(node_id)
-                stack.append({"id": node_id})
-            elif parsed['type'] in ['h5', 'h6']:
+            elif current_type == 'list':
+                # 列表项 -> 挂载到当前级别的父节点
                 parent = stack[-1] if stack[-1] else root_node
                 if 'children' not in parent:
                     parent['children'] = []
                 parent['children'].append(node_id)
-                stack.append({"id": node_id})
-            elif parsed['type'] == 'bold':
-                # 独立加粗 -> 挂载到最近的父亲
-                parent = stack[-1] if stack[-1] else root_node
-                if 'children' not in parent:
-                    parent['children'] = []
-                parent['children'].append(node_id)
-                stack.append({"id": node_id})
-            elif parsed['type'] == 'chinese':
-                # 中文数字 -> 挂载到 # 或 ##
-                parent = stack[1] if len(stack) > 1 and stack[1] else root_node
-                if 'children' not in parent:
-                    parent['children'] = []
-                parent['children'].append(node_id)
-                stack.append({"id": node_id})
-            elif parsed['type'] == 'arabic':
-                # 阿拉伯数字 -> 挂载到 # 或 ## 下
-                parent = stack[2] if len(stack) > 2 and stack[2] else (stack[1] if len(stack) > 1 and stack[1] else root_node)
-                if 'children' not in parent:
-                    parent['children'] = []
-                parent['children'].append(node_id)
-                stack.append({"id": node_id})
-            elif parsed['type'] == 'paren':
-                # 括号数字 -> 挂载到上一级
-                parent = stack[-1] if stack[-1] else root_node
-                if 'children' not in parent:
-                    parent['children'] = []
-                parent['children'].append(node_id)
-                stack.append({"id": node_id})
-            elif parsed['type'] == 'list':
-                # 列表项：挂载到 stack 中最后一个节点（即最近的标题）
-                # 列表项之间是平级关系，不应该互相挂载
-                parent = stack[-1] if stack[-1] else root_node
-                if 'children' not in parent:
-                    parent['children'] = []
-                parent['children'].append(node_id)
-                # 列表项不加入stack，避免后续列表项挂载到它上面
+                # 列表项不加入stack
             else:
                 # content -> 挂载到最近的父亲
                 parent = stack[-1] if stack[-1] else root_node
