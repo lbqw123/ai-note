@@ -415,13 +415,34 @@ interface SidebarProps {
 
 export function Sidebar({ darkMode }: SidebarProps) {
   const {
-    folders, notes, createFolder, createNote, sidebarCollapsed,
+    folders, notes, createFolder, createNote, sidebarCollapsed, setSidebarCollapsed,
     activeNoteId, setActiveNote, deleteNote, moveNoteToFolder, moveFolder,
   } = useNoteStore();
   const [addingFolder, setAddingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [hovered, setHovered] = useState(false);
   const [isRootDragOver, setIsRootDragOver] = useState(false);
+  
+  // 移动端左滑关闭
+  const touchStartXRef = useRef(0);
+  const touchStartYRef = useRef(0);
+  
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+  
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaX = touchEndX - touchStartXRef.current;
+    const deltaY = touchEndY - touchStartYRef.current;
+    
+    // 左滑关闭（水平滑动距离大于50，且水平滑动大于垂直滑动）
+    if (deltaX < -50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      setSidebarCollapsed(true);
+    }
+  };
 
   // 监听全局拖拽结束事件，重置根目录悬停状态
   useEffect(() => {
@@ -489,6 +510,8 @@ export function Sidebar({ darkMode }: SidebarProps) {
         background: darkMode ? '#0e1120' : '#D3C9E9',
         borderRight: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
       }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Header */}
       <div
