@@ -790,7 +790,7 @@ export function MindMapView({ darkMode }: MindMapViewProps) {
         <span style={{ fontSize: '0.75rem', color: darkMode ? '#64748b' : '#94a3b8' }}>{nodes.length} 个节点</span>
         <div className="flex items-center gap-2 ml-4">
           <span style={{ fontSize: '0.7rem', color: darkMode ? '#64748b' : '#94a3b8' }}>
-            💡 悬停节点可编辑、添加、删除
+            💡 悬停编辑节点
           </span>
         </div>
         <button

@@ -182,18 +182,14 @@ function AppContent() {
                 {activeView === 'starchain' && <KnowledgeGraphView darkMode={darkMode} />}
                 {activeView === 'graph' && <KnowledgeStarchainView darkMode={darkMode} />}
               {/* 底部滑动切换指示器 - 移动端 */}
+              {/* 底部滑动切换区域 - 移动端（透明） */}
               <div 
-                className="absolute bottom-0 left-0 right-0 h-16 z-50 md:hidden flex items-center justify-center"
+                className="absolute bottom-0 left-0 right-0 h-16 z-50 md:hidden"
                 style={{ 
-                  background: darkMode ? 'rgba(10,12,21,0.8)' : 'rgba(245,245,245,0.8)',
-                  backdropFilter: 'blur(10px)',
-                  borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                  background: 'transparent',
+                  pointerEvents: 'none',
                 }}
-              >
-                <div className="flex items-center gap-4">
-                  <span style={{ fontSize: '0.7rem', color: darkMode ? '#64748b' : '#94a3b8' }}>← 滑动切换视图 →</span>
-                </div>
-              </div>
+              />
               </main>
       </div>
 
