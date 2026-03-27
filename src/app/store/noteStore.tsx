@@ -331,8 +331,8 @@ export function NoteProvider({ children }: { children: ReactNode }) {
         
         // 先尝试从localStorage加载，确保用户能立即看到数据
         const localFolders = localStorage.getItem(STORAGE_KEYS.FOLDERS);
-        const localNotes = localStorage.getItem(STORAGE_KEYS.NOTES);
-        
+        const localNotesStr = localStorage.getItem(STORAGE_KEYS.NOTES);
+
         if (localFolders) {
           try {
             const parsed = JSON.parse(localFolders);
@@ -342,10 +342,10 @@ export function NoteProvider({ children }: { children: ReactNode }) {
             console.error('解析本地文件夹失败:', e);
           }
         }
-        
-        if (localNotes) {
+
+        if (localNotesStr) {
           try {
-            const parsed = JSON.parse(localNotes);
+            const parsed = JSON.parse(localNotesStr);
             setNotes(parsed);
             console.log('>>> [DEBUG] 从localStorage加载笔记成功');
           } catch (e) {
@@ -387,9 +387,22 @@ export function NoteProvider({ children }: { children: ReactNode }) {
           .select('*')
           .eq('user_id', userId)
           .order('updated_at', { ascending: false });
-        
+
+        let finalNotes: Note[] = [];
+        const localNotesArray: Note[] = [];
+
         if (notesError) {
           console.error('加载笔记失败:', notesError);
+          // 尝试只使用本地数据
+          const storedNotes = localStorage.getItem(STORAGE_KEYS.NOTES);
+          if (storedNotes) {
+            try {
+              finalNotes = JSON.parse(storedNotes);
+              localNotesArray.push(...finalNotes);
+            } catch (e) {
+              console.error('解析本地笔记失败:', e);
+            }
+          }
         } else if (notesData) {
           // 转换云端数据格式
           const cloudNotes = notesData.map(n => {
@@ -427,15 +440,16 @@ export function NoteProvider({ children }: { children: ReactNode }) {
           console.log('>>> [DEBUG] 过滤后云端笔记:', filteredCloudNotes.length, '原云端笔记:', cloudNotes.length);
           
           // 获取本地笔记
-          const localNotesStr = localStorage.getItem(STORAGE_KEYS.NOTES);
-          let localNotes: Note[] = [];
+          const storedNotes = localStorage.getItem(STORAGE_KEYS.NOTES);
+          localNotesArray.length = 0;
           try {
-            if (localNotesStr) {
-              localNotes = JSON.parse(localNotesStr);
-              console.log('>>> [DEBUG] 从localStorage读取笔记:', localNotes.length);
+            if (storedNotes) {
+              const parsed = JSON.parse(storedNotes);
+              localNotesArray.push(...parsed);
+              console.log('>>> [DEBUG] 从localStorage读取笔记:', localNotesArray.length);
               // 打印第一条笔记的mindmap信息
-              if (localNotes.length > 0) {
-                const firstNote = localNotes[0];
+              if (localNotesArray.length > 0) {
+                const firstNote = localNotesArray[0];
                 console.log('>>> [DEBUG] 第一条笔记:', firstNote.id, '更新时间:', firstNote.updatedAt, 'mindmap节点数:', firstNote.mindmap?.nodes?.length || 0);
               }
             } else {
@@ -473,7 +487,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
           };
           
           const mergedNotes = filteredCloudNotes.map(cloudNote => {
-            const localNote = localNotes.find(n => n.id === cloudNote.id);
+            const localNote = localNotesArray.find(n => n.id === cloudNote.id);
             if (localNote) {
               const cloudTime = parseTimestamp(cloudNote.updatedAt);
               const localTime = parseTimestamp(localNote.updatedAt);
@@ -518,16 +532,43 @@ export function NoteProvider({ children }: { children: ReactNode }) {
           
           // 添加本地有但云端没有的笔记（新建的内容）
           const cloudIds = new Set(filteredCloudNotes.map(n => n.id));
-          const localOnlyNotes = localNotes.filter(n => !cloudIds.has(n.id));
+          const localOnlyNotes = localNotesArray.filter(n => !cloudIds.has(n.id));
           notesToSync.push(...localOnlyNotes);
           
           const finalNotes = [...mergedNotes, ...localOnlyNotes];
-          
+
           setNotes(finalNotes);
           // 保存到localStorage
           localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(finalNotes));
           console.log('>>> [DEBUG] 从云端同步完成:', finalNotes.length, '需要同步到云端:', notesToSync.length);
-          
+
+          // 加载连接（必须在 finalNotes 定义之后）
+          const { data: connectionsData, error: connectionsError } = await supabase
+            .from('connections')
+            .select('*')
+            .eq('user_id', userId);
+
+          if (connectionsError) {
+            console.error('加载连接失败:', connectionsError);
+          } else if (connectionsData) {
+            // 转换数据格式
+            const formattedConnections = connectionsData.map(c => ({
+              id: c.id,
+              fromId: c.from_id,
+              toId: c.to_id,
+              type: c.type as ConnectionType,
+              label: c.label
+            }));
+            // 获取有效的笔记ID列表
+            const validNoteIds = new Set(finalNotes.map(n => n.id));
+            // 过滤掉引用了不存在笔记的connections
+            const validConnections = formattedConnections.filter(
+              c => validNoteIds.has(c.fromId) && validNoteIds.has(c.toId)
+            );
+            console.log('>>> [DEBUG] 加载connections:', formattedConnections.length, '过滤后:', validConnections.length);
+            setConnections(validConnections);
+          }
+
           // 将未同步的本地更新推送到云端
           if (notesToSync.length > 0) {
             console.log('>>> [DEBUG] 开始将本地更新同步到云端...');
@@ -556,34 +597,6 @@ export function NoteProvider({ children }: { children: ReactNode }) {
               }
             }
           }
-        }
-
-        // 加载连接
-        const { data: connectionsData, error: connectionsError } = await supabase
-          .from('connections')
-          .select('*')
-          .eq('user_id', userId);
-        
-        if (connectionsError) {
-          console.error('加载连接失败:', connectionsError);
-        } else if (connectionsData) {
-          // 转换数据格式
-          const formattedConnections = connectionsData.map(c => ({
-            id: c.id,
-            fromId: c.from_id,
-            toId: c.to_id,
-            type: c.type as ConnectionType,
-            label: c.label
-          }));
-          // 获取有效的笔记ID列表（用于过滤无效的connections）
-          // 使用 notes state（此时是从localStorage加载的状态）
-          const validNoteIds = new Set(notes.map(n => n.id));
-          // 过滤掉引用了不存在笔记的connections
-          const validConnections = formattedConnections.filter(
-            c => validNoteIds.has(c.fromId) && validNoteIds.has(c.toId)
-          );
-          console.log('>>> [DEBUG] 加载connections:', formattedConnections.length, '过滤后:', validConnections.length);
-          setConnections(validConnections);
         }
 
         // 加载AI设置
