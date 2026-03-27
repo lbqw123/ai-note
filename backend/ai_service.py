@@ -1716,10 +1716,13 @@ class AIService:
                 parent['children'].append(node_id)
                 stack.append({"id": node_id})
             elif parsed['type'] == 'list':
-                # 列表项：根据缩进级别挂载
-                parent = stack[min(parsed['level'] + 1, len(stack) - 1)] if stack else root_node
-                if not parent:
-                    parent = root_node
+                # 列表项：挂载到最近的非root父节点（通常是最近的标题）
+                # 找到stack中最后一个非None且非root的节点
+                parent = root_node
+                for i in range(len(stack) - 1, -1, -1):
+                    if stack[i] is not None and stack[i] != root_node:
+                        parent = stack[i]
+                        break
                 if 'children' not in parent:
                     parent['children'] = []
                 parent['children'].append(node_id)

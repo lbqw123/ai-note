@@ -788,11 +788,6 @@ export function MindMapView({ darkMode }: MindMapViewProps) {
         </div>
         <div style={{ width: 1, height: 16, background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
         <span style={{ fontSize: '0.75rem', color: darkMode ? '#64748b' : '#94a3b8' }}>{nodes.length} 个节点</span>
-        <div className="flex items-center gap-2 ml-4">
-          <span style={{ fontSize: '0.7rem', color: darkMode ? '#64748b' : '#94a3b8' }}>
-            💡 悬停编辑节点
-          </span>
-        </div>
         <button
           onClick={handleClearAllNodes}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors hover:bg-red-500/10"
