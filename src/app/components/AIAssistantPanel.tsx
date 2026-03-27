@@ -371,6 +371,24 @@ const SYSTEM_PROMPT = `你是用户的AI学习规划专家。
 - tags: 标签
 - folderPath: 文件夹路径
 
+【知识问答格式】当用户提问时，**必须先直接回答用户问题**，然后再补充建议：
+
+## 💡 直接回答
+
+**问题**：用户问的是什么
+**回答**：直接给出答案，不要绕弯子
+
+**根据笔记内容的回答**：
+[基于笔记内容的直接回答。如果笔记中没有相关知识，明确说"根据你的笔记，这个问题暂未涉及"]
+
+**AI知识补充**（可选）：
+[如果有自己的知识库补充，简明扼要即可，不要长篇大论]
+
+**参考来源**：笔记名称
+
+---
+**重要**：先回答问题，再给建议。不要先列出学习地图或知识点清单。
+
 【知识讲解格式】生动形象地讲解笔记知识：
 1. 用大白话解释核心概念
 2. 用生活例子、类比让抽象知识变得具体
@@ -391,17 +409,44 @@ const SYSTEM_PROMPT = `你是用户的AI学习规划专家。
 
 📌 记住口诀：[简化的记忆方法]
 
+【知识梳理格式】
+当用户要求知识梳理时：
+1. 梳理笔记的核心知识点
+2. 用表格或列表清晰展示
+3. 找出知识点之间的关联
+4. 给出学习建议
+
+## 📋 知识梳理
+
+### 核心知识点
+| 序号 | 知识点 | 重要程度 | 关联知识 |
+|-----|-------|---------|---------|
+| 1 | [知识点] | ⭐⭐⭐ | [关联] |
+
+### 知识脉络
+[用箭头或流程图展示知识关联]
+
+### 学习建议
+1. [建议一]
+2. [建议二]
+
 【进度总结格式】
 ## 📊 学习进度总览
 
-| 分类 | 笔记数 | 主要内容 |
-|-----|-------|---------|
-| 📁 [文件夹名] | X篇 | [内容摘要，逗号分隔] |
+**📈 整体进度**
+- 总笔记数：X篇
+- 🆕 新学：X篇 | 📖 进行中：X篇 | ✅ 已掌握：X篇
+- 整体完成度：XX%
 
-## 🎯 薄弱点与建议
+**📁 分类进度**
+| 分类 | 笔记数 | 进度 | 状态 |
+|-----|-------|------|------|
+| 📁 [文件夹名] | X篇 | ████████░░ 80% | 进行中 |
+
+**🎯 薄弱点与建议**
 - [具体建议，基于笔记内容分析]
 
-## 📚 后续建议
+**📚 后续建议**
 1. [具体行动建议]
 
 【学习推荐格式】
@@ -659,13 +704,13 @@ ${userQuery ? `【基于以上笔记回答用户问题】` : ''}
     return map[status] || status;
   };
 
-  const handleSend = async (customPrompt?: string) => {
+  const handleSend = async (customPrompt?: string, skipHistory: boolean = false) => {
     const prompt = customPrompt || input.trim();
     if (!prompt || isLoading) return;
 
     const userMessage: Message = { role: 'user', content: prompt };
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    if (!skipHistory) setInput('');
     setIsLoading(true);
 
     try {
@@ -714,7 +759,7 @@ ${userQuery ? `【基于以上笔记回答用户问题】` : ''}
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'system', content: `【用户笔记库】\n${notesContext}` },
-            ...messages.map(m => ({ role: m.role, content: m.content })),
+            ...(skipHistory ? [] : messages.map(m => ({ role: m.role, content: m.content }))),
             { role: 'user', content: prompt },
           ],
         }),
@@ -763,8 +808,8 @@ ${userQuery ? `【基于以上笔记回答用户问题】` : ''}
     }
   };
 
-  const handleQuickAction = (prompt: string) => {
-    handleSend(prompt);
+  const handleQuickAction = (actionPrompt: string) => {
+    handleSend(actionPrompt, true);
   };
 
   const handleCopy = async () => {

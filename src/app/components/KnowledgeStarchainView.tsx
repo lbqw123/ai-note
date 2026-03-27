@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Info } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useNoteStore, CONNECTION_COLORS, ConnectionType } from '../store/noteStore';
 
 interface NodePos {
@@ -135,6 +135,10 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
   const [sidebarCollapsed, setSidebarCollapsed] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
+  const [dragOffset, setDragOffset] = useState<Record<string, {x: number; y: number}>>({});
+  const [isDraggingNode, setIsDraggingNode] = useState(false);
+  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+  const dragStartPos = useRef<{x: number; y: number} | null>(null);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -182,10 +186,23 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
     setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
   };
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isPanning) return;
-    setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
-  }, [isPanning, panStart]);
-  const handleMouseUp = () => setIsPanning(false);
+    if (isDraggingNode && draggingNodeId && dragStartPos.current) {
+      const newX = e.clientX - dragStartPos.current.x;
+      const newY = e.clientY - dragStartPos.current.y;
+      setDragOffset(prev => ({ ...prev, [draggingNodeId]: { x: newX, y: newY } }));
+    } else if (isPanning) {
+      setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
+    }
+  }, [isPanning, panStart, isDraggingNode, draggingNodeId]);
+
+  const handleMouseUp = useCallback(() => {
+    if (isDraggingNode) {
+      setIsDraggingNode(false);
+      setDraggingNodeId(null);
+      dragStartPos.current = null;
+    }
+    setIsPanning(false);
+  }, [isDraggingNode]);
 
   // 移动端触摸缩放支持
   const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null);
@@ -356,12 +373,16 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
 
           <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
             {edgeData.map(edge => {
-              const p1 = positions[edge.from];
-              const p2 = positions[edge.to];
-              if (!p1 || !p2) return null;
+              const baseP1 = positions[edge.from];
+              const baseP2 = positions[edge.to];
+              if (!baseP1 || !baseP2) return null;
               const n1 = nodeData.find(n => n.id === edge.from);
               const n2 = nodeData.find(n => n.id === edge.to);
               if (!n1 || !n2) return null;
+              const off1 = dragOffset[edge.from] || { x: 0, y: 0 };
+              const off2 = dragOffset[edge.to] || { x: 0, y: 0 };
+              const p1 = { x: baseP1.x + off1.x, y: baseP1.y + off1.y };
+              const p2 = { x: baseP2.x + off2.x, y: baseP2.y + off2.y };
 
               const isHighlighted = hoveredId === edge.from || hoveredId === edge.to ||
                 selectedId === edge.from || selectedId === edge.to;
@@ -394,17 +415,27 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
               const isHovered = hoveredId === node.id;
               const isRelated = relatedConnections.some(c => c.fromId === node.id || c.toId === node.id);
               const dimmed = selectedId && !isSelected && !isRelated;
+              const offset = dragOffset[node.id] || { x: 0, y: 0 };
+              const nodeX = pos.x + offset.x;
+              const nodeY = pos.y + offset.y;
+              const isBeingDragged = draggingNodeId === node.id;
 
               return (
                 <g
                   key={node.id}
                   className="graph-node"
-                  style={{ cursor: 'pointer' }}
-                  transform={`translate(${pos.x}, ${pos.y})`}
+                  style={{ cursor: isBeingDragged ? 'grabbing' : 'grab' }}
+                  transform={`translate(${nodeX}, ${nodeY})`}
                   onMouseEnter={() => setHoveredId(node.id)}
                   onMouseLeave={() => setHoveredId(null)}
-                  onClick={() => setSelectedId(node.id)}
+                  onClick={(e) => { if (!isDraggingNode) setSelectedId(node.id); e.stopPropagation(); }}
                   onDoubleClick={() => setActiveNote(node.id)}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    setIsDraggingNode(true);
+                    setDraggingNodeId(node.id);
+                    dragStartPos.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+                  }}
                 >
                   {(isSelected || isHovered) && (
                     <circle
@@ -559,20 +590,6 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H3v-6"/><path d="M10 14 3 21"/><path d="M14 3h6v6"/><path d="M15 10 21 3"/></svg>
           )}
         </button>
-      )}
-
-      {!selectedId && (
-        <div
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full"
-          style={{ 
-              background: darkMode ? 'rgba(20,24,40,0.9)' : 'rgba(234,227,245,0.9)', 
-              border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, 
-              backdropFilter: 'blur(10px)'
-            }}
-        >
-          <Info size={12} style={{ color: darkMode ? '#64748b' : '#94a3b8' }} />
-          <span style={{ fontSize: '0.75rem', color: darkMode ? '#64748b' : '#94a3b8' }}>点击节点查看详情，双击打开笔记</span>
-        </div>
       )}
     </div>
   );
