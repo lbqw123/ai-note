@@ -574,6 +574,9 @@ export function NoteProvider({ children }: { children: ReactNode }) {
                 ? JSON.parse(aiSettingsData.settings_json) 
                 : aiSettingsData.settings_json;
               formattedAISettings = {
+                platform: aiSettingsData.platform as AIPlatform,
+                model: aiSettingsData.model,
+                apiKey: aiSettingsData.api_key || '',
                 selectedApi: settingsJson.selectedApi || aiSettingsData.platform,
                 keyTokens: settingsJson.keyTokens || {},
                 selectedModels: settingsJson.selectedModels || { [aiSettingsData.platform]: aiSettingsData.model }
