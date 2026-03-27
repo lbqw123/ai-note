@@ -214,7 +214,6 @@ interface NoteContextType {
   updateAISettings: (settings: Partial<AISettings>) => Promise<void>;
   importNote: (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Note>;
   parseLink: (url: string, categoryPath?: string) => Promise<{ success: boolean; note?: Note; error?: string }>;
-  generateMindmap: (content: string) => Promise<any>;
   testAPIConnection: (platform: string, apiKey: string) => Promise<boolean>;
   loadData: () => Promise<void>;
   saveData: () => void;
@@ -223,10 +222,10 @@ interface NoteContextType {
 const NoteContext = createContext<NoteContextType | null>(null);
 
 export function NoteProvider({ children }: { children: ReactNode }) {
-  const [folders, setFolders] = useState<Folder[]>(initialFolders);
-  const [notes, setNotes] = useState<Note[]>(initialNotes);
-  const [connections, setConnections] = useState<Connection[]>(initialConnections);
-  const [activeNoteId, setActiveNoteId] = useState<string | null>('n1');
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<NoteView>('note');
   const [searchQuery, setSearchQuery] = useState('');
@@ -318,9 +317,14 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       if (userId) {
         // 登录状态，从数据库加载
         
+        // 先清空默认数据，避免显示示例笔记
+        setFolders([]);
+        setNotes([]);
+        setConnections([]);
+        
         // 先尝试从localStorage加载，确保用户能立即看到数据
-        const localFolders = localStorage.getItem('folders');
-        const localNotes = localStorage.getItem('notes');
+        const localFolders = localStorage.getItem(STORAGE_KEYS.FOLDERS);
+        const localNotes = localStorage.getItem(STORAGE_KEYS.NOTES);
         
         if (localFolders) {
           try {
@@ -363,7 +367,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
             }));
             setFolders(formattedFolders);
             // 缓存到localStorage
-            localStorage.setItem('folders', JSON.stringify(formattedFolders));
+            localStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(formattedFolders));
             console.log('>>> [DEBUG] 从云端同步文件夹成功');
           }
         } catch (e) {
@@ -1458,87 +1462,6 @@ export function NoteProvider({ children }: { children: ReactNode }) {
     }
   }, [saveData, createFolderStructure, userId]);
 
-  // 生成思维导图
-  const generateMindmap = useCallback(async (content: string) => {
-    try {
-      const nodes: MindmapNode[] = [];
-      const links: MindmapLink[] = [];
-      
-      const lines = content.split('\n');
-      let nodeId = 1;
-      const parentMap: { [key: number]: number | null } = { 0: null };
-      let lastHeadingLevel = 0; // 记录最后一个标题的层级
-      let lastHeadingNodeId: number | null = null; // 记录最后一个标题的节点ID
-      
-      lines.forEach(line => {
-        const trimmedLine = line.trim();
-        if (trimmedLine.startsWith('#')) {
-          const level = (trimmedLine.match(/^#+/) || [''])[0].length;
-          const label = trimmedLine.replace(/^#+/, '').trim();
-          
-          const parentNode = parentMap[level - 1];
-          nodes.push({ id: nodeId.toString(), label, parent: parentNode?.toString() || null });
-          
-          if (parentNode !== null && parentNode !== undefined) {
-            links.push({ source: parentNode.toString(), target: nodeId.toString() });
-          }
-          
-          parentMap[level] = nodeId;
-          lastHeadingLevel = level;
-          lastHeadingNodeId = nodeId;
-          nodeId++;
-        } else if (trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
-          // 解析列表项作为最后一个标题的子节点
-          if (lastHeadingNodeId !== null) {
-            const label = trimmedLine.replace(/^[-*]\s*/, '').trim();
-            // 移除Markdown格式（如 **粗体**）
-            const cleanLabel = label.replace(/\*\*/g, '').replace(/\*/g, '');
-            if (cleanLabel) {
-              nodes.push({ id: nodeId.toString(), label: cleanLabel, parent: lastHeadingNodeId.toString() });
-              links.push({ source: lastHeadingNodeId.toString(), target: nodeId.toString() });
-              nodeId++;
-            }
-          }
-        }
-      });
-      
-      // 如果没有提取到标题，使用默认结构
-      if (nodes.length === 0) {
-        return {
-          nodes: [
-            { id: '1', label: '主题', parent: null },
-            { id: '2', label: '子主题1', parent: '1' },
-            { id: '3', label: '子主题2', parent: '1' },
-            { id: '4', label: '子主题3', parent: '1' }
-          ],
-          links: [
-            { source: '1', target: '2' },
-            { source: '1', target: '3' },
-            { source: '1', target: '4' }
-          ]
-        };
-      }
-      
-      return { nodes, links };
-    } catch (error) {
-      console.error('生成思维导图失败:', error);
-      // 返回模拟数据作为后备
-      return {
-        nodes: [
-          { id: '1', label: '主题', parent: null },
-          { id: '2', label: '子主题1', parent: '1' },
-          { id: '3', label: '子主题2', parent: '1' },
-          { id: '4', label: '子主题3', parent: '1' }
-        ],
-        links: [
-          { source: '1', target: '2' },
-          { source: '1', target: '3' },
-          { source: '1', target: '4' }
-        ]
-      };
-    }
-  }, []);
-
   // 测试API连接
   const testAPIConnection = useCallback(async (platform: string, apiKey: string) => {
     try {
@@ -1575,7 +1498,6 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       updateAISettings,
       importNote,
       parseLink,
-      generateMindmap,
       testAPIConnection,
       loadData,
       saveData,
