@@ -62,6 +62,7 @@ function AppContent() {
 
   // 使用 ref 存储触摸位置
   const touchStartRef = useRef(0);
+  const touchStartYRef = useRef(0);
   const isSwipingRef = useRef(false);
   const mainRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
@@ -87,7 +88,6 @@ function AppContent() {
 
     // 只在底部区域响应滑动切换（移动端优化）
     const BOTTOM_SWIPE_AREA = 100; // 底部 100px 区域
-    const touchStartYRef = useRef(0);
 
     const handleTouchStart = (e: TouchEvent) => {
       // 多指触摸时不处理 swipe
