@@ -1643,7 +1643,7 @@ class AIService:
                 parsed_lines.append(info)
 
         # 根据权重构建树
-        stack = [None]  # 栈：root 在 index 0
+        stack = [root_node]  # 栈：root 在 index 0
         node_map = {root_id: root_node}  # node_id -> node
 
         for parsed in parsed_lines:
@@ -1655,58 +1655,48 @@ class AIService:
             if len(text) > 50:
                 text = text[:47] + '...'
             
-            # 层级提升逻辑（统一处理所有标题类节点）
-            # 定义类型的实际级别（数字越小越高）
-            type_levels = {
-                'h1': 1, 'h2': 2, 'h3': 3, 'h4': 4, 'h5': 5, 'h6': 6,
-                'chinese': 4, 'bold': 5, 'arabic': 5, 'paren': 6
-            }
-            
+            # 核心逻辑：层级 = 出现顺序 + 从属关系
+            # 1. 第一个有效块 = 1级节点
+            # 2. 紧跟它的 = 2级节点
+            # 3. 再紧跟 = 3级节点
+            # 4. 列表缩进 = 内部嵌套
             current_type = parsed['type']
             
-            if current_type in type_levels:
-                # 标题类节点：使用层级提升逻辑
-                actual_level = type_levels[current_type]
-                
-                # 找到已存在的最高级别
-                max_existing = 0
-                for i in range(1, len(stack)):
-                    if stack[i]:
-                        max_existing = i
-                
-                # 确定有效级别：已存在最高级别+1，和实际级别取较大值
-                effective_level = max(max_existing + 1, actual_level)
-                
-                # 找到要挂载的父节点（effective_level - 1）
-                parent_level = effective_level - 1
-                if parent_level <= 0 or parent_level >= len(stack):
+            if current_type == 'list':
+                # 列表项：根据缩进级别挂载
+                # indent_level: 0=无缩进, 1=1级缩进, 2=2级缩进...
+                indent_level = parsed.get('level', 0)
+                # 缩进列表挂载到上一级列表项下，非缩进列表挂载到当前父节点下
+                if indent_level > 0 and len(stack) > 1:
+                    # 缩进列表 -> 挂载到 stack 的最后一个节点（上一个列表项）
+                    parent = stack[-1] if stack[-1] else root_node
+                else:
+                    # 非缩进列表 -> 挂载到当前父节点（stack 中最后一个非列表节点）
+                    parent = root_node
+                    for i in range(len(stack) - 1, 0, -1):
+                        if stack[i] and stack[i].get('_type') != 'list':
+                            parent = stack[i]
+                            break
+                if 'children' not in parent:
+                    parent['children'] = []
+                parent['children'].append(node_id)
+                # 列表项加入 stack（作为下一个缩进列表的父节点）
+                stack.append({"id": node_id, "_type": "list"})
+            else:
+                # 非列表节点（标题/粗体/中文数字等）-> 挂载到当前父节点
+                # 第一个有效块直接挂载到 root
+                if len(stack) == 1:
+                    # stack 只有 root，说明是第一个有效块
                     parent = root_node
                 else:
-                    parent = stack[parent_level] if stack[parent_level] else root_node
+                    # 挂载到 stack 最后一个节点
+                    parent = stack[-1] if stack[-1] else root_node
                 
                 if 'children' not in parent:
                     parent['children'] = []
                 parent['children'].append(node_id)
-                
-                # 更新 stack：保留 root 和有效的父节点层级
-                new_stack = [root_node]
-                for i in range(1, parent_level + 1):
-                    new_stack.append(stack[i] if i < len(stack) and stack[i] else None)
-                new_stack.append({"id": node_id})  # 当前节点
-                stack = new_stack
-            elif current_type == 'list':
-                # 列表项 -> 挂载到当前级别的父节点
-                parent = stack[-1] if stack[-1] else root_node
-                if 'children' not in parent:
-                    parent['children'] = []
-                parent['children'].append(node_id)
-                # 列表项不加入stack
-            else:
-                # content -> 挂载到最近的父亲
-                parent = stack[-1] if stack[-1] else root_node
-                if 'children' not in parent:
-                    parent['children'] = []
-                parent['children'].append(node_id)
+                # 更新 stack：添加当前节点
+                stack.append({"id": node_id, "_type": current_type})
 
             # 创建节点
             node = {
