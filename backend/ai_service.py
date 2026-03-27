@@ -1670,11 +1670,21 @@ class AIService:
                 parent['children'].append(node_id)
                 stack = [root_node, stack[1] if len(stack) > 1 else None, {"id": node_id}]
             elif parsed['type'] == 'h3':
+                # h3 应该挂载到 h2 或 h1 下
+                # 连续的 h3 应该是同级关系
                 parent = stack[2] if len(stack) > 2 and stack[2] else (stack[1] if len(stack) > 1 and stack[1] else root_node)
                 if 'children' not in parent:
                     parent['children'] = []
                 parent['children'].append(node_id)
-                stack = [root_node, stack[1] if len(stack) > 1 else None, stack[2] if len(stack) > 2 and stack[2] else None, {"id": node_id}]
+                # 重置 stack，确保连续的 h3 有相同的父节点
+                # stack 结构: [root, h1, h2, current_h3]
+                new_stack = [root_node]
+                if len(stack) > 1 and stack[1]:
+                    new_stack.append(stack[1])  # h1
+                if len(stack) > 2 and stack[2]:
+                    new_stack.append(stack[2])  # h2
+                new_stack.append({"id": node_id})  # current h3
+                stack = new_stack
             elif parsed['type'] == 'h4':
                 parent = stack[3] if len(stack) > 3 and stack[3] else (stack[2] if len(stack) > 2 and stack[2] else root_node)
                 if 'children' not in parent:
