@@ -235,7 +235,8 @@ export function KnowledgeGraphView({ darkMode }: KnowledgeGraphViewProps) {
       };
 
       // 发送请求到后端
-      const response = await fetch('http://localhost:8000/api/ai-recommend-notes', {
+      const API_BASE_URL = '/api';
+      const response = await fetch(`${API_BASE_URL}/ai-recommend-notes`, {
         method: 'POST',
         headers,
         body: JSON.stringify(requestData)

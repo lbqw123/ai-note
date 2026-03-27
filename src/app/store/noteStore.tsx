@@ -1360,7 +1360,8 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       }
       
       // 调用后端API解析链接
-      const response = await fetch('http://localhost:8000/api/parse-link-new', {
+      const API_BASE_URL = '/api';
+      const response = await fetch(`${API_BASE_URL}/parse-link-new`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ url }),
