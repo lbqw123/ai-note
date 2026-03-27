@@ -1467,6 +1467,8 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       const lines = content.split('\n');
       let nodeId = 1;
       const parentMap: { [key: number]: number | null } = { 0: null };
+      let lastHeadingLevel = 0; // 记录最后一个标题的层级
+      let lastHeadingNodeId: number | null = null; // 记录最后一个标题的节点ID
       
       lines.forEach(line => {
         const trimmedLine = line.trim();
@@ -1482,7 +1484,21 @@ export function NoteProvider({ children }: { children: ReactNode }) {
           }
           
           parentMap[level] = nodeId;
+          lastHeadingLevel = level;
+          lastHeadingNodeId = nodeId;
           nodeId++;
+        } else if (trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
+          // 解析列表项作为最后一个标题的子节点
+          if (lastHeadingNodeId !== null) {
+            const label = trimmedLine.replace(/^[-*]\s*/, '').trim();
+            // 移除Markdown格式（如 **粗体**）
+            const cleanLabel = label.replace(/\*\*/g, '').replace(/\*/g, '');
+            if (cleanLabel) {
+              nodes.push({ id: nodeId.toString(), label: cleanLabel, parent: lastHeadingNodeId.toString() });
+              links.push({ source: lastHeadingNodeId.toString(), target: nodeId.toString() });
+              nodeId++;
+            }
+          }
         }
       });
       
