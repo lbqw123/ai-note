@@ -23,7 +23,7 @@ export function TopNav({ darkMode, setDarkMode, isLoggedIn, setShowAuthModal, on
     notes, activeView, setActiveView,
     setSearchOpen, isSearchOpen, searchQuery, setSearchQuery,
     setAISettingsOpen, setLinkParseOpen, sidebarCollapsed, setSidebarCollapsed,
-    setActiveNote,
+    setActiveNote, setPasswordChangeOpen,
   } = useNoteStore();
   const [searchFocused, setSearchFocused] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -258,6 +258,16 @@ export function TopNav({ darkMode, setDarkMode, isLoggedIn, setShowAuthModal, on
                 minWidth: '120px'
               }}
             >
+              <button
+                onClick={() => { setShowAuthMenu(false); setPasswordChangeOpen(true); }}
+                className="w-full text-left px-4 py-2 text-sm transition-colors hover:bg-opacity-10 hover:bg-white/10 dark:hover:bg-black/10"
+                style={{
+                  color: darkMode ? '#e2e8f0' : '#1e293b',
+                  background: 'transparent'
+                }}
+              >
+                修改密码
+              </button>
               <button
                 onClick={onLogout}
                 className="w-full text-left px-4 py-2 text-sm transition-colors hover:bg-opacity-10 hover:bg-white/10 dark:hover:bg-black/10"

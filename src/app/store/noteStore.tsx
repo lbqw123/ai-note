@@ -181,6 +181,7 @@ interface NoteContextType {
   isSearchOpen: boolean;
   isAISettingsOpen: boolean;
   isLinkParseOpen: boolean;
+  isPasswordChangeOpen: boolean;
   aiSettings: AISettings;
   sidebarCollapsed: boolean;
   userId: string | null;
@@ -192,6 +193,7 @@ interface NoteContextType {
   setSearchOpen: (open: boolean) => void;
   setAISettingsOpen: (open: boolean) => void;
   setLinkParseOpen: (open: boolean) => void;
+  setPasswordChangeOpen: (open: boolean) => void;
   setSidebarCollapsed: (v: boolean) => void;
   setNotes: (notes: Note[]) => void;
   setActiveNoteId: (id: string | null) => void;
@@ -232,6 +234,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
   const [isSearchOpen, setSearchOpen] = useState(false);
   const [isAISettingsOpen, setAISettingsOpen] = useState(false);
   const [isLinkParseOpen, setLinkParseOpen] = useState(false);
+  const [isPasswordChangeOpen, setPasswordChangeOpen] = useState(false);
   const [aiSettings, setAISettings] = useState<AISettings>(initialAISettings);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -1489,7 +1492,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
     <NoteContext.Provider value={{
       folders, notes, connections,
       activeNoteId, activeFolderId, activeView,
-      searchQuery, isSearchOpen, isAISettingsOpen, isLinkParseOpen,
+      searchQuery, isSearchOpen, isAISettingsOpen, isLinkParseOpen, isPasswordChangeOpen,
       aiSettings, sidebarCollapsed, userId,
       setActiveNote: setActiveNoteId,
       setActiveFolder: setActiveFolderId,
@@ -1498,6 +1501,7 @@ export function NoteProvider({ children }: { children: ReactNode }) {
       setSearchOpen,
       setAISettingsOpen,
       setLinkParseOpen,
+      setPasswordChangeOpen,
       setSidebarCollapsed,
       setNotes,
       setActiveNoteId,

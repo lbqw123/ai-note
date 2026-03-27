@@ -10,11 +10,12 @@ import { AISettingsModal, syncAISettingsToLocalStorage } from './components/AISe
 import { AIAssistantPanel } from './components/AIAssistantPanel';
 import { LinkParseModal } from './components/LinkParseModal';
 import { AuthModal } from './components/AuthModal';
+import { PasswordChangeModal } from './components/PasswordChangeModal';
 import { supabase } from '../lib/supabase';
 import './styles/app.css';
 
 function AppContent() {
-  const { activeView, setActiveView, isAISettingsOpen, isLinkParseOpen } = useNoteStore();
+  const { activeView, setActiveView, isAISettingsOpen, isLinkParseOpen, isPasswordChangeOpen } = useNoteStore();
   const [darkMode, setDarkMode] = React.useState(() => {
     const saved = localStorage.getItem('theme');
     return saved !== 'light';
@@ -196,6 +197,7 @@ function AppContent() {
       {/* Modals */}
       {isAISettingsOpen && <AISettingsModal darkMode={darkMode} />}
       {isLinkParseOpen && <LinkParseModal darkMode={darkMode} />}
+      {isPasswordChangeOpen && <PasswordChangeModal darkMode={darkMode} isOpen={isPasswordChangeOpen} onClose={() => setPasswordChangeOpen(false)} />}
       <AIAssistantPanel darkMode={darkMode} />
       <AuthModal
         darkMode={darkMode}
