@@ -201,6 +201,14 @@ export function KnowledgeStarchainView({ darkMode }: KnowledgeStarchainViewProps
   };
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    // 底部区域不处理拖拽（让底部滑动切换视图生效）
+    const touchY = e.touches[0].clientY;
+    const windowHeight = window.innerHeight;
+    const BOTTOM_SWIPE_AREA = 100;
+    const isInBottomArea = touchY > windowHeight - BOTTOM_SWIPE_AREA;
+    
+    if (isInBottomArea) return;
+    
     if (e.touches.length === 2) {
       setIsTouchScaling(true);
       setIsPanning(false);
