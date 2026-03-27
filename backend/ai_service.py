@@ -1726,15 +1726,9 @@ class AIService:
                 parent['children'].append(node_id)
                 stack.append({"id": node_id})
             elif parsed['type'] == 'list':
-                # 列表项：挂载到最近的标题节点（h1-h6, chinese, arabic, bold）
+                # 列表项：挂载到 stack 中最后一个节点（即最近的标题）
                 # 列表项之间是平级关系，不应该互相挂载
-                parent = root_node
-                for i in range(len(stack) - 1, -1, -1):
-                    if stack[i] is not None and stack[i] != root_node:
-                        # 检查是否是标题类型节点（有children属性的是标题）
-                        if 'children' in stack[i]:
-                            parent = stack[i]
-                            break
+                parent = stack[-1] if stack[-1] else root_node
                 if 'children' not in parent:
                     parent['children'] = []
                 parent['children'].append(node_id)
