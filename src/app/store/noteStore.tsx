@@ -256,7 +256,11 @@ export function NoteProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         setUserId(session.user.id);
-        // 延迟加载，确保userId已更新
+        // 登录时先清空 localStorage，避免加载默认笔记
+        localStorage.removeItem(STORAGE_KEYS.FOLDERS);
+        localStorage.removeItem(STORAGE_KEYS.NOTES);
+        localStorage.removeItem(STORAGE_KEYS.CONNECTIONS);
+        // 延迟加载，确保 userId 已更新
         setTimeout(() => {
           loadData();
         }, 100);
