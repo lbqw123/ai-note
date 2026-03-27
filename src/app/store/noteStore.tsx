@@ -576,7 +576,8 @@ export function NoteProvider({ children }: { children: ReactNode }) {
             label: c.label
           }));
           // 获取有效的笔记ID列表（用于过滤无效的connections）
-          const validNoteIds = new Set(finalNotes.map(n => n.id));
+          // 使用 notes state（此时是从localStorage加载的状态）
+          const validNoteIds = new Set(notes.map(n => n.id));
           // 过滤掉引用了不存在笔记的connections
           const validConnections = formattedConnections.filter(
             c => validNoteIds.has(c.fromId) && validNoteIds.has(c.toId)
@@ -653,6 +654,57 @@ export function NoteProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // 复习时间跟踪：当选中笔记时自动更新复习记录
+  useEffect(() => {
+    if (!activeNoteId) return;
+
+    const note = notes.find(n => n.id === activeNoteId);
+    if (!note) return;
+
+    const now = new Date().toISOString();
+    const lastReviewed = note.metadata?.lastReviewedAt;
+    const reviewCount = note.metadata?.reviewCount || 0;
+
+    // 如果距离上次复习超过1分钟，才更新（避免频繁更新）
+    if (lastReviewed) {
+      const minutesSince = (Date.now() - new Date(lastReviewed).getTime()) / 60000;
+      if (minutesSince < 1) return;
+    }
+
+    // 更新复习记录
+    const updatedMetadata = {
+      ...note.metadata,
+      lastReviewedAt: now,
+      reviewCount: reviewCount + 1
+    };
+
+    // 直接更新本地state和localStorage（静默更新，不打扰用户）
+    setNotes(prev => prev.map(n =>
+      n.id === activeNoteId
+        ? { ...n, metadata: updatedMetadata }
+        : n
+    ));
+
+    // 保存到localStorage
+    const updatedNotes = notes.map(n =>
+      n.id === activeNoteId
+        ? { ...n, metadata: updatedMetadata }
+        : n
+    );
+    localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(updatedNotes));
+
+    // 异步同步到云端（如果已登录）
+    if (userId) {
+      supabase
+        .from('notes')
+        .update({ metadata: updatedMetadata })
+        .eq('id', activeNoteId)
+        .then(({ error }) => {
+          if (error) console.error('同步复习记录失败:', error);
+        });
+    }
+  }, [activeNoteId, notes, userId]);
 
   // 保存数据到localStorage（仅用于未登录状态或作为本地缓存）
   const saveData = useCallback(async () => {

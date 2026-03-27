@@ -23,6 +23,33 @@ function ScopeInfo({ darkMode }: { darkMode: boolean }) {
     return path.join(' → ');
   };
 
+  // 获取复习提醒
+  const getReviewReminders = () => {
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const weekMs = 7 * dayMs;
+
+    const needsReview: { note: any; daysSince: number }[] = [];
+
+    notes.forEach(note => {
+      const lastReviewed = note.metadata?.lastReviewedAt;
+      if (lastReviewed) {
+        const daysSince = Math.floor((now - new Date(lastReviewed).getTime()) / dayMs);
+        if (daysSince >= 7) {
+          needsReview.push({ note, daysSince });
+        }
+      } else {
+        const createdAt = new Date(note.createdAt).getTime();
+        const daysSince = Math.floor((now - createdAt) / dayMs);
+        if (daysSince >= 7) {
+          needsReview.push({ note, daysSince });
+        }
+      }
+    });
+
+    return needsReview.sort((a, b) => b.daysSince - a.daysSince).slice(0, 3);
+  };
+
   // 获取当前范围的笔记数量
   const getScopeInfo = () => {
     if (activeNoteId) {
@@ -68,6 +95,7 @@ function ScopeInfo({ darkMode }: { darkMode: boolean }) {
 
   const scope = getScopeInfo();
   const icon = scope.type === 'note' ? '📄' : scope.type === 'folder' ? '📁' : '📚';
+  const reviewReminders = getReviewReminders();
 
   return (
     <div>
@@ -76,9 +104,9 @@ function ScopeInfo({ darkMode }: { darkMode: boolean }) {
         <span className="text-sm font-medium" style={{ color: darkMode ? '#e2e8f0' : '#1e293b' }}>
           {scope.name}
         </span>
-        <span 
+        <span
           className="text-xs px-2 py-0.5 rounded-full"
-          style={{ 
+          style={{
             background: darkMode ? 'rgba(124,90,240,0.2)' : 'rgba(124,90,240,0.1)',
             color: '#7c5af0',
           }}
@@ -89,6 +117,33 @@ function ScopeInfo({ darkMode }: { darkMode: boolean }) {
       <p className="text-xs truncate" style={{ color: darkMode ? '#64748b' : '#94a3b8' }}>
         {scope.path}
       </p>
+
+      {reviewReminders.length > 0 && (
+        <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}` }}>
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="text-xs" style={{ color: '#f59e0b' }}>⏰</span>
+            <span className="text-xs font-medium" style={{ color: darkMode ? '#f59e0b' : '#d97706' }}>
+              复习提醒
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            {reviewReminders.map(({ note, daysSince }) => (
+              <div
+                key={note.id}
+                className="flex items-center justify-between text-xs px-2 py-1 rounded"
+                style={{ background: darkMode ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.08)' }}
+              >
+                <span className="truncate flex-1" style={{ color: darkMode ? '#fcd34d' : '#92400e' }}>
+                  {note.title}
+                </span>
+                <span className="text-xs ml-2" style={{ color: darkMode ? '#fbbf24' : '#b45309' }}>
+                  {daysSince}天未复习
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -290,55 +345,86 @@ interface QuickAction {
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { icon: <MessageCircle className="w-3.5 h-3.5" />, label: '知识问答', prompt: '请基于我的所有笔记回答我' },
-  { icon: <Zap className="w-3.5 h-3.5" />, label: '学习推荐', prompt: '根据我的笔记内容和学习进度，推荐下一步应该学习什么' },
-  { icon: <TrendingUp className="w-3.5 h-3.5" />, label: '进度总结', prompt: '总结一下我各学科/领域的学习进度，并给出建议' },
+  { icon: <MessageCircle className="w-3.5 h-3.5" />, label: '知识问答', prompt: '请基于我的笔记内容回答：' },
+  { icon: <Zap className="w-3.5 h-3.5" />, label: '学习推荐', prompt: '根据我的笔记内容，推荐前置补充知识和进阶学习方向' },
+  { icon: <TrendingUp className="w-3.5 h-3.5" />, label: '进度总结', prompt: '分析我的学习进度，基于文件夹和标签统计，给出薄弱点建议' },
 ];
 
-const SYSTEM_PROMPT = `【角色】你是用户的AI知识管理助手
+const SYSTEM_PROMPT = `【角色】你是用户的AI学习规划专家和知识助手
 
 【核心能力】
-1. 理解用户知识体系：分析用户在各学科/领域的学习进度
-2. 推荐学习路径：根据前置知识依赖关系，建议下一步学习内容
-3. 回答问题：基于用户笔记内容提供准确回答
-4. 发现薄弱点：识别用户知识的盲点和不足
+1. 知识问答：基于用户笔记准确回答，结合AI预训练知识补充
+2. 学习推荐：分析知识结构，推荐前置补充和进阶方向
+3. 进度总结：评估学习状态，识别薄弱点和提升建议
 
-【回答规则】
+═══════════════════════════════════════════
+【功能一：知识问答】
+═══════════════════════════════════════════
+当用户提问时：
+1. 首先基于笔记内容回答（如果笔记覆盖了该知识点）
+2. 利用AI预训练知识补充完善答案
+3. 如果笔记信息不足，明确指出缺失部分
+4. 在答案中标注参考来源
+
+回答格式：
+## 💡 回答
+
+【基于笔记的回答...】
+
+【AI知识补充...】
+
+📚 参考笔记：
+• [笔记标题] - 相关内容
+
+═══════════════════════════════════════════
+【功能二：学习推荐（核心功能）】
+═══════════════════════════════════════════
+分析用户当前学习内容，结合AI预训练知识推荐：
+
+## 📖 前置知识补充（学习当前内容前）
+
+| 补充知识 | 重要性 | 已有笔记 | 说明 |
+|---------|-------|---------|------|
+| xxx | ⭐⭐⭐ | ✅有/❌无 | 为什么需要 |
+
+## 🚀 进阶学习方向（当前内容掌握后）
+
+| 进阶方向 | 难度 | 已有笔记 | 价值 |
+|---------|-----|---------|-----|
+| xxx | 中/高 | ✅有/❌无 | 应用场景 |
+
+推荐理由：基于AI预训练的标准学习路径 + 你的笔记结构
+
+═══════════════════════════════════════════
+【功能三：进度总结】
+═══════════════════════════════════════════
+分析用户在各领域的学习状态：
+
+## 📊 学习进度总览
+
+基于文件夹和标签分组统计：
+
+| 分类 | 笔记数 | 主要内容 |
+|-----|-------|---------|
+| 📁 AI/机器学习 | 5篇 | GPT、深度学习、Transformer |
+| 📁 编程开发 | 3篇 | Python、Web开发 |
+
+## 🎯 薄弱点与建议
+- 某个文件夹下的知识点较少，建议补充
+- 某个文件夹笔记关联较少，可加强连接
+
+## 📚 后续建议
+1. 优先补充【空缺较大的分类】
+2. 加强【已有笔记】的关联连接
+3. 深化【高频访问】的主题
+
+═══════════════════════════════════════════
+【通用规则】
+═══════════════════════════════════════════
 - 用简洁专业的中文回答
-- 如果笔记信息不足以回答，明确指出需要补充哪些方面的笔记
-- 推荐学习内容时，说明理由（基于什么笔记/前置知识）
-- 适当使用 emoji 增加可读性（📚💡⚡✅📖⏳）
-
-【笔记信息说明】
-用户提供的是笔记摘要，包含：
-- title: 笔记标题
-- content: 笔记内容摘要
-- tags: 标签（学科/领域分类）
-- subject: 学科分类（AI/编程/考试/其他）
-
-【引用追踪规则】
-当你基于某篇笔记回答问题时，必须在回答末尾添加引用标注，格式如下：
-📚 参考笔记：
-• [笔记标题1]
-• [笔记标题2]
-
-如果只基于1-2篇笔记，可以直接在各知识点后标注，如：
-- Stable Diffusion 是一种...（来源：[SD原理笔记]）
-
-【⚠️ 强制输出格式 - 必须遵守】
-你的回答必须是纯 Markdown 文本，绝对禁止返回 JSON 或代码块！
-
-✅ 正确格式（直接输出 Markdown）：
-## 🎯 下一步学习建议
-
-基于你的笔记，你已经掌握了图形推理的基本解题步骤...
-
-### 1. 基础练习
-- 练习内容...
-- 注意事项...
-
-📚 参考笔记：
-• [图形推理技巧]
+- 结合笔记内容 + AI预训练知识
+- 适当使用emoji（📚💡⚡✅📖🚀🎯📊🟢🟡🔴）
+- 绝对禁止返回JSON格式
 
 ❌ 错误格式（禁止使用）：
 \`\`\`json
@@ -347,10 +433,12 @@ const SYSTEM_PROMPT = `【角色】你是用户的AI知识管理助手
 { "answer": "..." }
 任何 JSON 格式都是错误的！
 
-【输出格式建议】
-- 知识问答：先直接回答，再补充细节，最后列出参考笔记
-- 学习推荐：使用 ## 标题 + ### 小标题列出推荐内容 + 原因
-- 进度总结：按学科/领域分组展示`;
+【⚠️ 强制输出格式 - 必须遵守】
+你的回答必须是纯 Markdown 文本，绝对禁止返回 JSON 或代码块！
+✅ 正确格式（直接输出 Markdown）
+
+【笔记信息说明】
+笔记摘要包含：title（标题）、content（内容摘要）、tags（标签）、folderPath（文件夹路径，反映知识分类）`;
 
 export function AIAssistantPanel({ darkMode }: { darkMode: boolean }) {
   const [isOpen, setIsOpen] = useState(false);

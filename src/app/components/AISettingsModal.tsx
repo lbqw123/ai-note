@@ -203,47 +203,54 @@ export function AISettingsModal({ darkMode }: AISettingsModalProps) {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒超时
-      
+
       const response = await fetch(`${API_BASE_URL}/ai/settings/load`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         },
         signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
         if (data.settings) {
           const parsed = data.settings;
-          
+
+          // 获取本地缓存（用于对比）
+          const currentSaved = localStorage.getItem(LOCAL_STORAGE_KEY);
+          const currentParsed = currentSaved ? JSON.parse(currentSaved) : {};
+
           if (shouldCacheLocally) {
             // 本地缓存模式：合并云端和本地设置
-            // 【重要】云端优先：云端返回的 apiKeys（已解密）应该覆盖本地的
+            // 【重要】云端优先，但如果云端返回空值，保留本地有效值
             setSelectedApi(prev => parsed.selectedApi || prev);
-            setApiKeys(prev => ({ ...prev, ...parsed.apiKeys })); // 云端覆盖本地
             setSelectedModels(prev => ({ ...prev, ...parsed.selectedModels }));
-            
-            // 更新localStorage缓存（云端优先，确保包含最新密钥）
-            const currentSaved = localStorage.getItem(LOCAL_STORAGE_KEY);
-            const currentParsed = currentSaved ? JSON.parse(currentSaved) : {};
+
+            // 只有云端返回了有效的 apiKeys 才覆盖本地
+            const cloudHasApiKeys = parsed.apiKeys && Object.values(parsed.apiKeys).some(v => v && v.trim());
+            if (cloudHasApiKeys) {
+              setApiKeys(prev => ({ ...prev, ...parsed.apiKeys }));
+            }
+
+            // 更新localStorage缓存（云端优先，但保留本地 keyTokens）
             const merged = {
-              ...currentParsed, // 先复制旧的（保留 keyTokens 等）
-              selectedApi: parsed.selectedApi,
-              apiKeys: parsed.apiKeys, // 使用云端返回的密钥
-              keyTokens: parsed.keyTokens || currentParsed.keyTokens,
-              selectedModels: parsed.selectedModels,
+              ...currentParsed,
+              selectedApi: parsed.selectedApi || currentParsed.selectedApi,
+              apiKeys: cloudHasApiKeys ? parsed.apiKeys : (currentParsed.apiKeys || {}),
+              keyTokens: parsed.keyTokens || currentParsed.keyTokens || {},
+              selectedModels: { ...currentParsed.selectedModels, ...parsed.selectedModels },
               cacheLocally: true,
+              isLoggedIn: true,
             };
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(merged));
-            console.log('>>> [DEBUG] 云端设置同步完成，已更新localStorage');
+            console.log('>>> [DEBUG] 云端设置同步完成，已更新localStorage（保留本地keyTokens）');
           } else {
             // 仅云端模式：直接使用云端设置
             if (parsed.selectedApi) setSelectedApi(parsed.selectedApi);
             if (parsed.apiKeys) setApiKeys(parsed.apiKeys);
             if (parsed.selectedModels) setSelectedModels(parsed.selectedModels);
-            // 不写入localStorage，或只写入配置（不含密钥）
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
               selectedApi: parsed.selectedApi,
               selectedModels: parsed.selectedModels,
@@ -533,7 +540,7 @@ export function AISettingsModal({ darkMode }: AISettingsModalProps) {
             <label style={{ fontSize: '0.75rem', color: darkMode ? '#94a3b8' : '#64748b', fontWeight: 500, display: 'block', marginBottom: 10 }}>
               AI 平台
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {(Object.entries(API_CONFIGS) as [ApiType, ApiConfig][]).map(([api, config]) => (
                 <button
                   key={api}
@@ -549,14 +556,14 @@ export function AISettingsModal({ darkMode }: AISettingsModalProps) {
                   }}
                 >
                   <div className="flex items-center justify-between">
-                    <span style={{ fontSize: '0.8rem', color: selectedApi === api ? '#a78bfa' : (darkMode ? '#94a3b8' : '#64748b'), fontWeight: 500 }}>
+                    <span style={{ fontSize: '0.8rem', color: selectedApi === api ? '#a78bfa' : (darkMode ? '#94a3b8' : '#64748b'), fontWeight: 500, wordBreak: 'break-word' }}>
                       {config.name}
                     </span>
                     {apiKeys[api] && (
-                      <Check size={12} style={{ color: '#34d399' }} />
+                      <Check size={12} style={{ color: '#34d399', flexShrink: 0 }} />
                     )}
                   </div>
-                  <div style={{ fontSize: '0.6rem', color: darkMode ? '#64748b' : '#94a3b8', marginTop: 2 }}>{config.desc}</div>
+                  <div style={{ fontSize: '0.6rem', color: darkMode ? '#64748b' : '#94a3b8', marginTop: 2, wordBreak: 'break-word' }}>{config.desc}</div>
                 </button>
               ))}
             </div>
