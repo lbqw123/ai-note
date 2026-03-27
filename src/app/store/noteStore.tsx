@@ -475,7 +475,9 @@ export function NoteProvider({ children }: { children: ReactNode }) {
                 localTime: localNote.updatedAt,
                 cloudTimestamp: cloudTime,
                 localTimestamp: localTime,
-                timeDiff: timeDiff + 'ms'
+                timeDiff: timeDiff + 'ms',
+                cloudMindmapNodes: cloudNote.mindmap?.nodes?.length || 0,
+                localMindmapNodes: localNote.mindmap?.nodes?.length || 0
               });
               
               // 如果本地时间比云端新超过5秒，说明有未同步的本地更新
@@ -483,8 +485,21 @@ export function NoteProvider({ children }: { children: ReactNode }) {
                 console.log('>>> [DEBUG] 本地有未同步更新:', localNote.id, '时间差:', timeDiff, 'ms');
                 notesToSync.push(localNote);
                 return localNote; // 暂时使用本地数据
-              } else {
+              } else if (timeDiff < -SYNC_THRESHOLD) {
+                // 云端明显更新，使用云端数据
                 console.log('>>> [DEBUG] 使用云端数据:', cloudNote.id, 'folderId:', cloudNote.folderId);
+                return cloudNote;
+              } else {
+                // 时间差在阈值内，合并数据：使用云端基础数据，但保留本地mindmap（如果本地有而云端没有）
+                console.log('>>> [DEBUG] 合并数据:', localNote.id);
+                const mergedNote = { ...cloudNote };
+                // 如果本地有mindmap但云端没有，保留本地mindmap
+                if (localNote.mindmap?.nodes?.length > 0 && !cloudNote.mindmap?.nodes?.length) {
+                  mergedNote.mindmap = localNote.mindmap;
+                  mergedNote.mindmapMarkdown = localNote.mindmapMarkdown;
+                  console.log('>>> [DEBUG] 保留本地mindmap:', localNote.id, '节点数:', localNote.mindmap.nodes.length);
+                }
+                return mergedNote;
               }
             }
             return cloudNote;
