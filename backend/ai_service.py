@@ -1672,23 +1672,37 @@ class AIService:
             elif parsed['type'] == 'h3':
                 # h3 应该挂载到 h2 或 h1 或 root 下
                 # 连续的 h3 应该是同级关系，都挂载到同一个父节点
-                # 查找 h2 或 h1 或 root 作为父节点
+                # 判断逻辑：
+                # - 如果 stack 长度 >= 4，说明有 h1, h2, h3，当前是新的 h3，挂载到 h2
+                # - 如果 stack 长度 == 3，说明有 h1, h2，挂载到 h2
+                # - 如果 stack 长度 == 2，说明只有 h1，挂载到 h1
+                # - 如果 stack 长度 == 1，说明只有 root，挂载到 root
                 parent = root_node
-                if len(stack) > 2 and stack[2]:
-                    parent = stack[2]  # h2
-                elif len(stack) > 1 and stack[1]:
-                    parent = stack[1]  # h1
+                if len(stack) >= 4:
+                    # stack = [root, h1, h2, prev_h3]，挂载到 h2
+                    parent = stack[2]
+                elif len(stack) == 3 and stack[2]:
+                    # stack = [root, h1, h2]，挂载到 h2
+                    parent = stack[2]
+                elif len(stack) == 2 and stack[1]:
+                    # stack = [root, h1]，挂载到 h1
+                    parent = stack[1]
+                # 否则 stack = [root]，挂载到 root
                 if 'children' not in parent:
                     parent['children'] = []
                 parent['children'].append(node_id)
-                # 重置 stack，只保留 root 和当前 h3
+                # 重置 stack，保留 root, h1, h2（如果存在）和当前 h3
                 # 这样后续的 h3 也会挂载到同一个父节点
-                if parent == root_node:
-                    stack = [root_node, {"id": node_id}]
-                elif parent == stack[1]:
-                    stack = [root_node, stack[1], {"id": node_id}]
-                else:
-                    stack = [root_node, stack[1] if len(stack) > 1 else None, stack[2] if len(stack) > 2 else None, {"id": node_id}]
+                new_stack = [root_node]
+                if len(stack) >= 3 and stack[1] and stack[2]:
+                    # 有 h1 和 h2
+                    new_stack.append(stack[1])  # h1
+                    new_stack.append(stack[2])  # h2
+                elif len(stack) == 2 and stack[1]:
+                    # 只有 h1
+                    new_stack.append(stack[1])  # h1
+                new_stack.append({"id": node_id})  # current h3
+                stack = new_stack
             elif parsed['type'] == 'h4':
                 parent = stack[3] if len(stack) > 3 and stack[3] else (stack[2] if len(stack) > 2 and stack[2] else root_node)
                 if 'children' not in parent:
