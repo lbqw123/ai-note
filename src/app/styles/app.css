@@ -1,0 +1,239 @@
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Markdown preview styles */
+.prose-custom {
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+
+.prose-custom h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 1.5rem 0 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  line-height: 1.3;
+}
+
+.prose-custom h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #334155;
+  margin: 1.25rem 0 0.5rem;
+  line-height: 1.4;
+}
+
+.prose-custom h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #475569;
+  margin: 1rem 0 0.4rem;
+  line-height: 1.4;
+}
+
+.prose-custom h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0.75rem 0 0.3rem;
+}
+
+.prose-custom p {
+  margin: 0.5rem 0;
+}
+
+.prose-custom strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+/* Dark mode styles */
+.dark .prose-custom {
+  color: #94a3b8;
+}
+
+.dark .prose-custom h1 {
+  color: #e2e8f0;
+  border-bottom-color: rgba(255, 255, 255, 0.07);
+}
+
+.dark .prose-custom h2 {
+  color: #cbd5e1;
+}
+
+.dark .prose-custom h3 {
+  color: #94a3b8;
+}
+
+.dark .prose-custom strong {
+  color: #e2e8f0;
+}
+
+.prose-custom em {
+  color: #a78bfa;
+  font-style: italic;
+}
+
+.prose-custom .inline-code {
+  background: rgba(124, 90, 240, 0.12);
+  color: #a78bfa;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  border: 1px solid rgba(124, 90, 240, 0.2);
+}
+
+.prose-custom .code-block {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  position: relative;
+}
+
+.prose-custom .code-block::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 0.65rem;
+  color: #374151;
+  font-family: 'SF Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.prose-custom .code-block code {
+  color: #7dd3fc;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+
+.prose-custom blockquote {
+  border-left: 3px solid #7c5af0;
+  padding: 0.5rem 1rem;
+  margin: 0.75rem 0;
+  background: rgba(124, 90, 240, 0.05);
+  border-radius: 0 8px 8px 0;
+  color: #64748b;
+  font-style: italic;
+}
+
+.prose-custom ul {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+  list-style: none;
+}
+
+.prose-custom ul li.ul-item {
+  position: relative;
+  padding-left: 0.25rem;
+  margin: 0.25rem 0;
+}
+
+.prose-custom ul li.ul-item::before {
+  content: '▸';
+  position: absolute;
+  left: -1rem;
+  color: #7c5af0;
+  font-size: 0.75rem;
+  top: 0.15em;
+}
+
+.prose-custom ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+  list-style: decimal;
+  color: #94a3b8;
+}
+
+.prose-custom ol li.ol-item {
+  margin: 0.25rem 0;
+  padding-left: 0.25rem;
+}
+
+.prose-custom hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 1.25rem 0;
+}
+
+.prose-custom .checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.875rem;
+}
+
+.prose-custom .checkbox-item::before {
+  content: '□';
+  color: #475569;
+  font-size: 1rem;
+}
+
+.prose-custom .checkbox-item.checked::before {
+  content: '☑';
+  color: #34d399;
+}
+
+.prose-custom .checkbox-item.checked {
+  color: #475569;
+  text-decoration: line-through;
+}
+
+/* Textarea editor */
+textarea {
+  caret-color: #7c5af0;
+}
+
+/* Select dark styling */
+select option {
+  background: #1a1e30;
+  color: #e2e8f0;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* Glow pulse */
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Star background dots */
+.star-bg {
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(124, 90, 240, 0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 60%, rgba(34, 211, 238, 0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 30%, rgba(167, 139, 250, 0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 80%, rgba(124, 90, 240, 0.15) 0%, transparent 100%);
+}
